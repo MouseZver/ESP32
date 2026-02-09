@@ -16,7 +16,7 @@ void loadSettings( Settings &settings )
 		return;
   }
 	
-	settings.backLightMode = 0x4;
+	settings.backLightMode = 0x1;
 	settings.frontLight = 0x1;
 }
 

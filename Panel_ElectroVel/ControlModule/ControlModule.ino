@@ -125,9 +125,6 @@ void setup() {
 	// Дополнительно - можно ещё отключить WiFi полностью
 	WiFi.disconnect(true);
 
-	// Установи время один раз (закомментируй после первого запуска)
-	//rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-
 	delay(2000);
 
 	sendEvent(to_int(DeviceProperty::FrontLight), !deviceSettings.frontLight);
@@ -142,9 +139,8 @@ void setup() {
 
 void loop() {
 	serialEvent();
+	serial2Event();
 	tempSensor.update(3000);
-
-
 
 	if (_flagPowerBackLight) {
 		ledBL.setPeriod(500);
@@ -154,10 +150,20 @@ void loop() {
 			default:
 			case 0x1:
 				{
+					ledBL.setPeriod(1500);
+					ledPing.setPeriod(1500);
+
+					(void)ledBL.doubleBlink(100, 1);
+					(void)ledPing.doubleBlink(100, 1);
+					break;
+				}
+			case 0x2:
+				{
 					(void)ledBL.doubleBlink(80, 8);
 					(void)ledPing.doubleBlink(80, 8);
 					break;
 				}
+			/*
 			case 0x2:
 				{
 					ledBL.blink();
@@ -175,15 +181,7 @@ void loop() {
 					}
 					break;
 				}
-			case 0x4:
-				{
-					ledBL.setPeriod(1500);
-					ledPing.setPeriod(1500);
-
-					(void)ledBL.doubleBlink(100, 1);
-					(void)ledPing.doubleBlink(100, 1);
-					break;
-				}
+			
 			case 0x8:
 				{
 					//ledBL.flash(20);
@@ -199,6 +197,7 @@ void loop() {
 					//ledPing.blink();
 					break;
 				}
+			*/
 		}
 	} else if (digitalRead(PIN_POWER_BACK_LIGHT)) {
 		ledBL.off();

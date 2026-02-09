@@ -158,7 +158,7 @@ void processCommand(const char* jsonStr) {
 }
 
 // ==== Приём данных по Serial2 ====
-void serialEvent() {
+void serial2Event() {
     while (Serial2.available()) {
         char c = Serial2.read();
 
@@ -188,5 +188,31 @@ void serialEvent() {
         processCommand(incomingBuffer);
         bufferIndex = 0;
         incomingBuffer[0] = '\0';
+    }
+}
+
+// settime 2025-12-16 15:30:00
+void serialEvent() {
+    while (Serial.available()) {
+        String cmd = Serial.readStringUntil('\n');
+        cmd.trim();
+        if (cmd.startsWith("settime ")) {
+            String timeStr = cmd.substring(8);
+            // Ожидаем формат: YYYY-MM-DD HH:MM:SS
+            if (timeStr.length() == 19) {
+                int Y = timeStr.substring(0, 4).toInt();
+                int M = timeStr.substring(5, 7).toInt();
+                int D = timeStr.substring(8, 10).toInt();
+                int h = timeStr.substring(11, 13).toInt();
+                int m = timeStr.substring(14, 16).toInt();
+                int s = timeStr.substring(17, 19).toInt();
+
+                DateTime dt(Y, M, D, h, m, s);
+                rtc.adjust(dt);
+                Serial.println("RTC set to: " + String(dt.timestamp()));
+            } else {
+                Serial.println("Invalid format. Use: settime YYYY-MM-DD HH:MM:SS");
+            }
+        }
     }
 }
