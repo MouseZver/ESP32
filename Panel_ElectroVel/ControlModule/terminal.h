@@ -128,7 +128,7 @@ void commandsTerminal(JsonDocument& doc) {
                     sendEvent(to_int(DeviceProperty::Power), false);
                 }
                 saveSettings(deviceSettings);
-                digitalWrite(IN1, HIGH);  // сигнализация
+                digitalWrite(IN1, HIGH);
             }
             break;
         }

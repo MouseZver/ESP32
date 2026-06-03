@@ -94,7 +94,11 @@ Settings deviceSettings;
 #include "terminal.h"
 
 void setup() {
-
+    // Инициализация EEPROM для ESP32
+    if (!EEPROM.begin(EEPROM_SIZE)) {
+        Serial.println("EEPROM: не удалось инициализировать!");
+    }
+	
 	loadSettings(deviceSettings);
 
 	for (int pin : pins) {

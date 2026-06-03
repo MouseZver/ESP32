@@ -1,27 +1,93 @@
-// EEPROM, флаг, детектор данных
+/**
+ * @file rom.h
+ * @brief Хранение настроек устройства в энергонезависимой памяти EEPROM.
+ *
+ * Особенности работы на ESP32:
+ * - Перед первым обращением к EEPROM обязателен вызов EEPROM.begin(size)
+ *   в setup() основного скетча (иначе буфер не будет выделен).
+ * - После EEPROM.put(...) ОБЯЗАТЕЛЬНО вызывается EEPROM.commit(),
+ *   иначе данные останутся только в RAM и пропадут при перезагрузке.
+ * - Размер резервируемой области задаётся в EEPROM.begin() — берём с запасом,
+ *   чтобы в будущем можно было расширять структуру Settings без переноса адресов.
+ */
+#ifndef ROM_H
+#define ROM_H
+
+#include <Arduino.h>
+#include <EEPROM.h>
+
+// Маркер (флаг), по которому определяем — были ли уже сохранены настройки.
+// Если в ячейке 0x00 лежит именно это значение — значит, EEPROM инициализирован
+// и можно читать структуру из адреса 0x01.
 #define DATA_FLAG 0xAA
 
-struct Settings 
+// Адрес в EEPROM, с которого начинается структура Settings.
+// Адрес 0x00 зарезервирован под DATA_FLAG.
+#define SETTINGS_ADDR 0x01
+
+/**
+ * @brief Размер области, резервируемой под EEPROM.
+ *
+ * Реально занимаем: 1 байт (DATA_FLAG) + sizeof(Settings)
+ * Но на ESP32 удобнее округлять с запасом — это не тратит физическую флеш
+ * (NVS хранит данные отдельно), зато упрощает расширение структуры в будущем.
+ */
+#define EEPROM_SIZE 64
+
+/**
+ * @struct Settings
+ * @brief Структура настроек устройства, сохраняемая в EEPROM.
+ *
+ * Текущий размер: 2 байта.
+ * При добавлении новых полей главное — не менять порядок существующих,
+ * чтобы старые сохранённые данные читались корректно.
+ */
+struct Settings
 {
-  byte backLightMode;
-	byte frontLight;
+    byte backLightMode; ///< Режим подсветки заднего фонаря
+    byte frontLight;    ///< Состояние переднего фонаря
 };
 
-void loadSettings( Settings &settings ) 
+/**
+ * @brief Загрузка настроек из EEPROM.
+ *
+ * Логика:
+ * 1) Проверяем, что в ячейке 0x00 лежит маркер DATA_FLAG.
+ * 2) Если маркер есть — читаем структуру из адреса SETTINGS_ADDR.
+ * 3) Если маркера нет (первый запуск / стёртая флеш) — заполняем значениями по умолчанию.
+ *
+ * @param[out] settings Ссылка на структуру, в которую будут прочитаны данные.
+ */
+void loadSettings(Settings &settings)
 {
-	if ( EEPROM.read( 0x0 ) == DATA_FLAG )
-	{
-		EEPROM.get( 0x1, settings ); // Если маркер есть, загружаем настройки из EEPROM
-		
-		return;
-  }
-	
-	settings.backLightMode = 0x1;
-	settings.frontLight = 0x1;
+    if (EEPROM.read(0x0) == DATA_FLAG)
+    {
+        // Маркер на месте — читаем ранее сохранённые настройки
+        EEPROM.get(SETTINGS_ADDR, settings);
+        return;
+    }
+
+    // Первый запуск или повреждённые данные — задаём дефолты
+    settings.backLightMode = 0x1;
+    settings.frontLight    = 0x1;
 }
 
-void saveSettings( Settings &settings ) 
+/**
+ * @brief Сохранение настроек в EEPROM (с обязательным commit для ESP32).
+ *
+ * Логика:
+ * 1) Записываем маркер DATA_FLAG в ячейку 0x00.
+ * 2) Записываем структуру Settings начиная с адреса SETTINGS_ADDR.
+ * 3) Вызываем EEPROM.commit() — ФИНАЛЬНЫЙ ШАГ, без него на ESP32 данные
+ *    физически НЕ попадут во флеш-память.
+ *
+ * @param[in] settings Настройки, которые нужно сохранить.
+ */
+void saveSettings(Settings &settings)
 {
-	//EEPROM.put( 0x0, DATA_FLAG );
-	//EEPROM.put( 0x1, settings );
+    EEPROM.put(0x0, DATA_FLAG);
+    EEPROM.put(SETTINGS_ADDR, settings);
+    EEPROM.commit(); // <<< КРИТИЧНО для ESP32!
 }
+
+#endif // ROM_H
